@@ -1,1 +1,4 @@
 .venv/*
+.chessbackend/__pycache__/*
+.chessbackend/migrations/__pycache__/*
+.chessbackend/models/__pycache__/*

@@ -5,7 +5,7 @@ from chessbackend.models.enums import ColorEnum, PieceTypeEnum
 
 
 class Piece(models.Model):
-    game = models.ForeignKey(Game, on_delete=models.SET_NULL, related_name="pieces")
+    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="pieces")
     color = models.CharField(
         max_length=25, choices=[(color.value, color.name) for color in ColorEnum]
     )

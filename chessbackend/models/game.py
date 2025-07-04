@@ -3,8 +3,6 @@ from datetime import datetime, UTC
 from django.db import models
 
 from chessbackend.models.enums import ColorEnum, PieceTypeEnum, StartingPositionEnum
-from chessbackend.models.move import Move
-from chessbackend.models.piece import Piece
 # Games will run on the server having the time remaining decrement
 # Users clients will send requests to update the position of the pieces and status of the game
 
@@ -100,6 +98,8 @@ class Game(models.Model):
     # TODO add users who are playing the game once I add that feature if I want to!
 
     def _create_standard_board(self):
+        from chessbackend.models.piece import Piece
+
         types_to_create = {
             0: PieceTypeEnum.ROOK.value,
             1: PieceTypeEnum.KNIGHT.value,
@@ -186,6 +186,8 @@ class Game(models.Model):
             )
 
     def start_game(self):
+        from chessbackend.models.move import Move
+
         if self.starting_position == StartingPositionEnum.STANDARD.name:
             self._create_standard_board()
 
