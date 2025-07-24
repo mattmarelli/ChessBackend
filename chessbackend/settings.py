@@ -10,11 +10,15 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
+import json
+import os
 from pathlib import Path
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+with open(os.path.join(BASE_DIR, os.getenv("CONFIG", "config.json"))) as cfg:
+    CONFIG = json.load(cfg)
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
@@ -72,6 +76,23 @@ WSGI_APPLICATION = "chessbackend.wsgi.application"
 
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+
+
+# TODO swap to postgresql database at some point!
+# database_user = CONFIG["DATABASE"].get("USER")
+# if not database_user:
+#     database_user = "chessbackend"
+# DATABASES = {
+#     "default": {
+#         "ENGINE": "django.db.backends.postgresql",
+#         "NAME": CONFIG["DATABASE"]["NAME"] if CONFIG["DATABASE"].get("NAME") else "chessbackend",
+#         "USER": CONFIG["DATABASE"]["USER"] if CONFIG["DATABASE"].get("USER") else "chessbackend",
+#         "PASSWORD": CONFIG["DATABASE"]["PASSWORD"],
+#         "HOST": CONFIG["DATABASE"]["HOST"],
+#         "PORT": CONFIG["DATABASE"]["PORT"],
+#     },
+# }
+
 
 DATABASES = {
     "default": {
