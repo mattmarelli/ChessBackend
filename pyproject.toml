@@ -10,8 +10,18 @@ setuptools = "^80.9.0"
 Django = "^5.2.3"
 djangorestframework = "^3.16.0"
 ruff = "^0.12.1"
+factory-boy = "^3.3.3"
+pytest = "^8.4.1"
+pytest-django = "^4.11.1"
 
 [tool.poetry.dev-dependencies]
+
+[tool.pytest.ini_options]
+addopts = "--reuse-db --tb=short --showlocals --log-level INFO"
+DJANGO_SETTINGS_MODULE = "chessbackend.test_settings"
+testpaths = [
+    "chessbackend",
+]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
