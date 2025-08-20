@@ -4,6 +4,7 @@ from django.db import models
 # from django.db.models.signals import pre_save
 # from django.dispatch import receiver
 
+from chessbackend.models.base import BaseModel
 from chessbackend.models.enums import ColorEnum, PieceTypeEnum, StartingPositionEnum
 
 # Games will run on the server having the time remaining decrement
@@ -84,7 +85,7 @@ def default_board():
     }
 
 
-class Game(models.Model):
+class Game(BaseModel):
     game_start_time = models.DateTimeField(auto_now=True)
     game_end_time = models.DateTimeField(blank=True, null=True)
     initial_player_time = models.DurationField(blank=True, null=True)
@@ -116,6 +117,26 @@ class Game(models.Model):
         from chessbackend.models.piece import Piece
 
         self.current_board = default_board()
+        existing_pieces = self.pieces.all()
+
+        # Reset board and return
+        if existing_pieces:
+            # TODO need to allow pawn promotions and to catch that here so that the original piece is used!
+            for existing_piece in existing_pieces:
+                existing_piece.current_row = existing_piece.starting_row
+                existing_piece.current_column = existing_piece.starting_column
+                existing_piece.captured = False
+                existing_piece.captured_by = None
+                existing_piece.defended = False
+                existing_piece.save()
+
+                self.current_board[existing_piece.current_position_string()][
+                    "piece"
+                ] = existing_piece.board_dict()
+
+            self.save()
+            return
+
         created_pieces = []
         types_to_create = {
             0: PieceTypeEnum.ROOK.value,
@@ -126,7 +147,7 @@ class Game(models.Model):
         }
         for i in range(4):
             created_pieces.append(
-                Piece.objects.create(
+                Piece.actives.create(
                     game=self,
                     color=ColorEnum.WHITE.value,
                     type=PieceTypeEnum.PAWN.value,
@@ -137,7 +158,7 @@ class Game(models.Model):
                 )
             )
             created_pieces.append(
-                Piece.objects.create(
+                Piece.actives.create(
                     game=self,
                     color=ColorEnum.WHITE.value,
                     type=PieceTypeEnum.PAWN.value,
@@ -148,7 +169,7 @@ class Game(models.Model):
                 )
             )
             created_pieces.append(
-                Piece.objects.create(
+                Piece.actives.create(
                     game=self,
                     color=ColorEnum.BLACK.value,
                     type=PieceTypeEnum.PAWN.value,
@@ -159,7 +180,7 @@ class Game(models.Model):
                 )
             )
             created_pieces.append(
-                Piece.objects.create(
+                Piece.actives.create(
                     game=self,
                     color=ColorEnum.BLACK.value,
                     type=PieceTypeEnum.PAWN.value,
@@ -171,7 +192,7 @@ class Game(models.Model):
             )
 
             created_pieces.append(
-                Piece.objects.create(
+                Piece.actives.create(
                     game=self,
                     color=ColorEnum.WHITE.value,
                     type=types_to_create[i],
@@ -182,7 +203,7 @@ class Game(models.Model):
                 )
             )
             created_pieces.append(
-                Piece.objects.create(
+                Piece.actives.create(
                     game=self,
                     color=ColorEnum.BLACK.value,
                     type=types_to_create[i],
@@ -199,7 +220,7 @@ class Game(models.Model):
                 i = i + 1
 
             created_pieces.append(
-                Piece.objects.create(
+                Piece.actives.create(
                     game=self,
                     color=ColorEnum.WHITE.value,
                     type=types_to_create[i],
@@ -210,7 +231,7 @@ class Game(models.Model):
                 )
             )
             created_pieces.append(
-                Piece.objects.create(
+                Piece.actives.create(
                     game=self,
                     color=ColorEnum.BLACK.value,
                     type=types_to_create[i],
@@ -243,7 +264,7 @@ class Game(models.Model):
         if self.starting_position == StartingPositionEnum.STANDARD.value:
             self._initialize_standard_board()
 
-        Move.objects.create(
+        Move.actives.create(
             game=self,
             number=0,
             move_color=ColorEnum.WHITE.value,
@@ -281,44 +302,55 @@ class Game(models.Model):
     def end_game(self, game_over):
         self.game_end_time = datetime.now(UTC)
 
-    def move_piece(self, starting_position: tuple, end_position: tuple) -> None:
+    def move_piece(self, starting_position: str, end_position: str) -> None:
         from chessbackend.models.move import Move
 
         current_move = self.moves.order_by("-number").first()
-        starting_position_string = Game.get_string_from_position(starting_position)
-        end_position_string = Game.get_string_from_position(end_position)
+        starting_position_tuple = Game.get_position_from_string(starting_position)
+        end_position_tuple = Game.get_position_from_string(end_position)
+        # starting_position_string = Game.get_string_from_position(starting_position)
+        # end_position_string = Game.get_string_from_position(end_position)
         end_time = datetime.now(UTC)
-        moving_piece = self.current_board[starting_position_string]["piece"]
-        ending_piece = self.current_board[end_position_string]["piece"]
+
+        moving_piece = self.current_board[starting_position]["piece"]
+        if moving_piece is None:
+            return "No piece to move!"
+
+        ending_piece = self.current_board[end_position]["piece"]
         if ending_piece:
             end_p = self.pieces.get(id=ending_piece["id"])
             if moving_piece["piece_color"] == ending_piece["piece_color"]:
-                return "Error.  Cannot move a piece onto a square of the same color"
+                return "Cannot move a piece onto a square of the same color"
 
-        if current_move.move_color != moving_piece["piece_color"]:
-            return "Error. Moving piece must be the same color as the move color"
+        if current_move and current_move.move_color != moving_piece["piece_color"]:
+            return "Moving piece must be the same color as the move color"
 
         move_p = self.pieces.get(id=moving_piece["id"])
 
-        current_move.moving_piece = move_p
-        current_move.start_column = starting_position[0]
-        current_move.start_row = starting_position[1]
-        current_move.end_column = end_position[0]
-        current_move.end_row = end_position[1]
-        if ending_piece:
-            current_move.captured_piece = end_p
-        current_move.end_time = end_time
-        current_move.save()
+        if end_position_tuple not in move_p.possible_moves():
+            return "Selected piece could not move to desired position"
 
-        move_p.current_column = end_position[0]
-        move_p.current_row = end_position[1]
+        if current_move:
+            current_move.moving_piece = move_p
+            current_move.start_column = starting_position_tuple[0]
+            current_move.start_row = starting_position_tuple[1]
+            current_move.end_column = end_position_tuple[0]
+            current_move.end_row = end_position_tuple[1]
+            if ending_piece:
+                current_move.captured_piece = end_p
+            current_move.end_time = end_time
+            current_move.save()
+
+        move_p.current_column = end_position_tuple[0]
+        move_p.current_row = end_position_tuple[1]
         if ending_piece:
             move_p.captured_piece = end_p
         move_p.save()
 
-        self.current_board[starting_position_string]["piece"] = None
-        self.current_board[end_position_string]["piece"] = move_p.board_dict()
+        self.current_board[starting_position]["piece"] = None
+        self.current_board[end_position]["piece"] = move_p.board_dict()
 
+        # TODO seperate this is check checking to a seperate function!
         black_in_check = False
         white_in_check = False
         for piece in self.pieces.all():
@@ -358,10 +390,11 @@ class Game(models.Model):
             self.end_game(game_over)
         self.save()
 
-        Move.objects.create(
-            game=self,
-            number=current_move.number + 1,
-            move_color=ColorEnum.BLACK.value
-            if current_move.move_color == ColorEnum.WHITE.value
-            else ColorEnum.WHITE.value,
-        )
+        if current_move and not game_over:
+            Move.actives.create(
+                game=self,
+                number=current_move.number + 1,
+                move_color=ColorEnum.BLACK.value
+                if current_move.move_color == ColorEnum.WHITE.value
+                else ColorEnum.WHITE.value,
+            )

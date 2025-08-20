@@ -1,6 +1,7 @@
 [tool.poetry]
 name = "chess-be"
 version = "0.1.0"
+package-mode= false
 description = ""
 authors = ["Matthew Marelli <mattmarelli@gmail.com>"]
 

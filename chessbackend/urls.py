@@ -18,6 +18,17 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 
+from rest_framework import routers
+
+from endpoints.views.game import GameViewSet
+from endpoints.views.login import LoginView
+
+router = routers.SimpleRouter()
+router.register(r"games", GameViewSet, basename="Game")
+
 urlpatterns = [
     path("admin/", admin.site.urls),
+    path("login/", LoginView.as_view(), name="Login"),
 ]
+
+urlpatterns += router.urls

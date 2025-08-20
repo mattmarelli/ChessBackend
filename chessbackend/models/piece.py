@@ -1,10 +1,11 @@
 from django.db import models
 
+from chessbackend.models.base import BaseModel
 from chessbackend.models.game import Game
 from chessbackend.models.enums import ColorEnum, PieceTypeEnum
 
 
-class Piece(models.Model):
+class Piece(BaseModel):
     game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="pieces")
     color = models.CharField(
         max_length=25, choices=[(color.value, color.name) for color in ColorEnum]

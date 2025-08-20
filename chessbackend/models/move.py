@@ -1,10 +1,11 @@
 from django.db import models
 
+from chessbackend.models.base import BaseModel
 from chessbackend.models.enums import ColorEnum
 from chessbackend.models.piece import Game, Piece
 
 
-class Move(models.Model):
+class Move(BaseModel):
     game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="moves")
     start_time = models.DateTimeField(auto_now=True)
     end_time = models.DateTimeField(blank=True, null=True)
